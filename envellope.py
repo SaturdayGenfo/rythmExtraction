@@ -3,26 +3,33 @@ from scipy.fftpack import fft, ifft
 import numpy as np
 import matplotlib.pyplot as plt
 
-def envelope(s, a, show=True, k=1000):
+def hhanning(fe):
+    N = 0.1*fe
+    X = np.arange(N//2, N)
+    return 0.5*(1-np.cos(2.0*np.pi*X/N))
+
+def envelope(s, a, fe, show=True, k=1000):
 
 
     square = np.vectorize(lambda x: x**2)  #mettre au carré toute un vecteur
     power = np.vectorize(lambda x: a**x) # idem mais a puissance x
 
 
-    s2 = square(s[:k]) #mettre au carré toutes les données
+    s2 = rectify(s[:k]) #mettre au carré toutes les données
 
-    h = power(np.arange(k))  # vecteur contenant toutes les puissances de a
+    h = np.concatenate([hhanning(fe), np.zeros(k-0.05*fe)])  # vecteur contenant toutes les puissances de a
 
     tfs2 = fft(s2) #transformée de Fourrier du signal au carré
     tfh = fft(h) #transformée de Fourier de h
 
 
-    env = ifft(np.multiply(tfh, tfs2)) #env est la convolution du signal au carré et de h, a étant choisi lors de l'appel de la fonction
+    env = ifft(np.multiply(tfh, tfs2)) 
+    denv = np.zeros(k//4)
 
-
-
-    d = rectify(differentiate(env, 50))
+    for i in range(k//4):
+        denv[i] = env[4*i]
+        
+    d = halfRectify(differentiate(env, 50))
     
     smoothd = peaks(d, 100)
 
@@ -35,7 +42,7 @@ def envelope(s, a, show=True, k=1000):
         plt.subplot(4,1,3)
         plt.plot(d[:k], 'y')
         plt.subplot(4,1,4)
-        plt.plot(smoothd[:k], 'y')
+        plt.plot(smoothd[:k], 'g')
         plt.show()
 
     return env
@@ -75,6 +82,7 @@ def peaks(signal, i):
         if p[k] < 0.85*highest :
             p[k] = 0
     return np.array(p)
-
 def rectify(signal):
+    return np.abs(signal)
+def halfRectify(signal):
     return np.array([max(s, 0) for s in signal])
