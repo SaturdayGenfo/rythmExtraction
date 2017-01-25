@@ -8,50 +8,45 @@ def hhanning(fe):
     X = np.arange(N//2, N)
     return 0.5*(1-np.cos(2.0*np.pi*X/N))
 
-def envelope(s, a, fe, show=True, k=1000):
-
-
-    square = np.vectorize(lambda x: x**2)  #mettre au carré toute un vecteur
-    power = np.vectorize(lambda x: a**x) # idem mais a puissance x
-
+def envelope(s, fe, show=True, k=1000):
 
     s2 = rectify(s[:k]) #mettre au carré toutes les données
-
-    h = np.concatenate([hhanning(fe), np.zeros(k-0.05*fe)])  # vecteur contenant toutes les puissances de a
-
+    h = np.concatenate([hhanning(fe), np.zeros(k-0.05*fe)])  
     tfs2 = fft(s2) #transformée de Fourrier du signal au carré
     tfh = fft(h) #transformée de Fourier de h
-
-
     env = ifft(np.multiply(tfh, tfs2)) 
     denv = np.zeros(k//4)
 
     for i in range(k//4):
         denv[i] = env[4*i]
         
-    d = halfRectify(differentiate(env, 50))
-    
-    smoothd = peaks(d, 100)
+    d = halfRectify(differentiate(env, 5))
 
 
     if show:
-        plt.subplot(4,1,1)
+        
+        plt.subplot(3,1,1)
         plt.plot(s2[:k], 'b')
-        plt.subplot(4,1,2)
+        cur_axes = plt.gca()
+        cur_axes.axes.get_xaxis().set_ticklabels([])
+        cur_axes.axes.get_yaxis().set_ticklabels([])
+        plt.ylabel("Signal")
+        plt.subplot(3,1,2)
         plt.plot(env[:k], 'r')
-        plt.subplot(4,1,3)
+        plt.ylabel("Enveloppe")
+        cur_axes = plt.gca()
+        cur_axes.axes.get_xaxis().set_ticklabels([])
+        cur_axes.axes.get_yaxis().set_ticklabels([])
+        plt.subplot(3,1,3)
         plt.plot(d[:k], 'y')
-        plt.subplot(4,1,4)
-        plt.plot(smoothd[:k], 'g')
+        plt.ylabel("Derivée")
+        cur_axes = plt.gca()
+        cur_axes.axes.get_xaxis().set_ticklabels([])
+        cur_axes.axes.get_yaxis().set_ticklabels([])
+        plt.savefig('result.png', dpi=300)
         plt.show()
 
-    return env
-
-def passbas(signal, a, k):
-    power = np.vectorize(lambda x: a**x)
-    h = power(np.arange(k))
-    tfh = fft(h)
-    return ifft(np.multiply(tfh, fft(signal)))
+    return d
 
 def differentiate(env, n):
 
@@ -62,26 +57,26 @@ def differentiate(env, n):
     derivee = ifft(np.multiply(fft(WEtendu), fft(env)))
 
     return derivee
+    
+def combFilter(x, delay, fe):
+    alpha = 0.8
+    y = np.concatenate([np.zeros(delay), np.zeros_like(x)])
+    for i in range(0, x.shape[0]):
+        y[i+delay] = alpha*y[i] + (1-alpha)*x[i]
+    filt = ifft(np.multiply(fft(y[delay:]), fft(x)))
+    return filt
 
-def theta(signal, k, i):
-    minIndex = max(k-i, 0)
-    maxIndex= min(k+i, signal.shape[0])
-    return np.median(signal[minIndex:maxIndex])
-
-def peaks(signal, i):
-    N = signal.shape[0]
-    p = []
-    highest = 0
-    for k in range(N):
-        if signal[k] > theta(signal, k, i):
-            p.append(signal[k])
-            highest = max(highest, signal[k])
-        else:
-            p.append(0)
-    for k in range(N):
-        if p[k] < 0.85*highest :
-            p[k] = 0
-    return np.array(p)
+def energy(s):
+    return np.sum(np.abs(np.multiply(s, s)))
+    
+def combBank(s, fe):
+    combs = []
+    for bpm in range(30, 300):
+        f = bpm/60.0 
+        delay = int(np.ceil(fe/f))
+        combs.append(energy(combFilter(s, delay, fe)))
+    return combs
+         
 def rectify(signal):
     return np.abs(signal)
 def halfRectify(signal):

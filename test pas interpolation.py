@@ -30,20 +30,6 @@ def interpolation(T,data) :
                 I.append((i*pas+tmin-T[j-1])*(data[j]-data[j-1])/(T[j]-T[j-1])+data[j-1])
                 i=i+1
         j=j+1
-    return I
+    return I, pas
         
 
-import matplotlib.pyplot as plt
-import numpy as np
-
-T = [0, 0.5, 0.9, 1.5, 2.0, 2.6, 3.1, 3.5, 4.0, 4.4, 4.9, 5.5, 6.0, 7.0, 7.5]
-
-data = [i**4 for i in T]
-
-I = interpolation(T, data)
-
-plt.plot(np.linspace(0, 8, 1000), [i**4 for i in np.linspace(0, 8, 1000)] , color='r')
-
-plt.plot([0.5*i for i in range(15)], I, marker='o', color='b')
-
-plt.show()
