@@ -10,4 +10,4 @@ def audioIn(show=True, k=1000):
         s = audio[1]
     Fe = audio[0]
     N = s.shape[-1]
-    return s, tfd(s, Fe, N, show, k), Fe
+    return s, Fe
